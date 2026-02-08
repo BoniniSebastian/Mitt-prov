@@ -68,6 +68,14 @@
         <button id="copyPromptBtn" class="btn btn-primary">Kopiera ChatGPT-prompt</button>
         <span id="copyStatus" class="muted"></span>
       </div>
+
+      <!-- NYTT: Prompt-ruta som alltid fungerar att kopiera manuellt på iOS -->
+      <label class="label" for="promptBox" style="margin-top:12px;">Prompt (kopiera till ChatGPT)</label>
+      <textarea id="promptBox" class="textarea" readonly style="min-height:140px;"></textarea>
+
+      <div class="row">
+        <button id="selectPromptBtn" class="btn btn-ghost" type="button">Markera prompt</button>
+      </div>
     </section>
 
     <!-- Input card -->
