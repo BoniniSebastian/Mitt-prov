@@ -1,7 +1,8 @@
-// Prov-MVP: Parse -> Render -> Grade -> Redo/Wrong-only (no backend)
+// Prov-MVP: allt sker lokalt i webbläsaren (ingen backend)
 
 const el = (id) => document.getElementById(id);
 
+// ===== DOM =====
 const inputText = el("inputText");
 const loadBtn = el("loadBtn");
 const clearBtn = el("clearBtn");
@@ -22,16 +23,18 @@ const wrongOnlyBtn = el("wrongOnlyBtn");
 
 const appTitle = el("appTitle");
 
-// AI Prompt UI
+// AI-prompt UI
 const qCountEl = el("qCount");
 const optCountEl = el("optCount");
 const copyPromptBtn = el("copyPromptBtn");
 const copyStatus = el("copyStatus");
 
-let currentQuiz = null;       // full quiz
-let viewQuiz = null;          // currently rendered quiz (full or wrong-only)
-let lastGrade = null;         // { chosenIndices: (number|null)[], wrongQIs: number[] }
+// ===== STATE =====
+let currentQuiz = null;
+let viewQuiz = null;
+let lastGrade = null;
 
+// ===== EXEMPEL =====
 const EXAMPLE_TEXT = `TEST: Exempelprov
 
 Q: Vilken färg har himlen en klar dag?
@@ -43,13 +46,9 @@ Q: Hur många ben har en spindel?
 - *8
 - 6
 - 10
-
-Q: Vilket är ett däggdjur?
-- Haj
-- *Hund
-- Örn
 `;
 
+// ===== HJÄLP =====
 function showError(msg) {
   parseError.textContent = msg;
   parseError.classList.remove("hidden");
@@ -63,7 +62,6 @@ function escapeHtml(s) {
     "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
   }[c]));
 }
-
 function resetUI() {
   currentQuiz = null;
   viewQuiz = null;
@@ -74,19 +72,20 @@ function resetUI() {
   resultEl.classList.add("hidden");
   resultEl.innerHTML = "";
   afterActions.classList.add("hidden");
-
   hideError();
+
   appTitle.textContent = "Prov";
 }
 
+// ===== PARSE =====
 function parseQuiz(raw) {
   const lines = raw
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map(l => l.trim())
-    .filter(l => l.length > 0);
+    .filter(Boolean);
 
-  if (lines.length === 0) throw new Error("Ingen text att parsa.");
+  if (!lines.length) throw new Error("Ingen text att parsa.");
 
   let title = "Prov";
   let i = 0;
@@ -98,16 +97,14 @@ function parseQuiz(raw) {
 
   const questions = [];
   while (i < lines.length) {
-    const line = lines[i];
-    if (!line.toUpperCase().startsWith("Q:")) {
-      throw new Error(`Förväntade "Q:" men fick: "${line}"`);
+    if (!lines[i].toUpperCase().startsWith("Q:")) {
+      throw new Error(`Förväntade "Q:" men fick "${lines[i]}"`);
     }
 
-    const qText = line.slice(2).trim();
-    if (!qText) throw new Error("En fråga saknar text efter Q:.");
+    const qText = lines[i].slice(2).trim();
     i++;
 
-    const opts = [];
+    const options = [];
     let correctIndex = -1;
 
     while (i < lines.length && lines[i].startsWith("-")) {
@@ -119,124 +116,177 @@ function parseQuiz(raw) {
         opt = opt.slice(1).trim();
       }
 
-      if (!opt) throw new Error(`Ett svarsalternativ är tomt i frågan: "${qText}"`);
-
       if (isCorrect) {
         if (correctIndex !== -1) {
-          throw new Error(`Flera rätta svar markerade i frågan: "${qText}". Endast ett får ha *.`);
+          throw new Error(`Flera rätta svar i frågan: "${qText}"`);
         }
-        correctIndex = opts.length;
+        correctIndex = options.length;
       }
 
-      opts.push(opt);
+      options.push(opt);
       i++;
     }
 
-    if (opts.length < 2 || opts.length > 3) {
-      throw new Error(`Frågan "${qText}" måste ha 2–3 svarsalternativ (har ${opts.length}).`);
+    if (options.length < 2 || options.length > 3) {
+      throw new Error(`Frågan "${qText}" måste ha 2–3 svar.`);
     }
     if (correctIndex === -1) {
-      throw new Error(`Ingen rätt markering (*) i frågan: "${qText}".`);
+      throw new Error(`Ingen rätt markering (*) i frågan: "${qText}"`);
     }
 
-    questions.push({ text: qText, options: opts, correctIndex });
+    questions.push({ text: qText, options, correctIndex });
   }
 
-  if (questions.length === 0) throw new Error("Inga frågor hittades.");
   return { title, questions };
 }
 
+// ===== RENDER =====
 function renderQuiz(quiz) {
   quizContainer.innerHTML = "";
-  resultEl.classList.add("hidden");
-  resultEl.innerHTML = "";
-  afterActions.classList.add("hidden");
-
   quizTitle.textContent = quiz.title;
   appTitle.textContent = quiz.title;
 
   quiz.questions.forEach((q, qi) => {
-    const qDiv = document.createElement("div");
-    qDiv.className = "question";
-    qDiv.dataset.qi = String(qi);
+    const div = document.createElement("div");
+    div.className = "question";
 
-    qDiv.innerHTML = `
-      <p class="q-title">${qi + 1}. ${escapeHtml(q.text)} <span class="badge" id="badge-${qi}"></span></p>
-      <div class="options" role="radiogroup" aria-label="Fråga ${qi + 1}">
-        ${q.options.map((opt, oi) => {
-          const name = `q_${qi}`;
-          const id = `q_${qi}_o_${oi}`;
-          return `
-            <label class="option" for="${id}">
-              <input type="radio" id="${id}" name="${name}" value="${oi}" />
-              <span>${escapeHtml(opt)}</span>
-            </label>
-          `;
-        }).join("")}
+    div.innerHTML = `
+      <p class="q-title">${qi+1}. ${escapeHtml(q.text)} <span class="badge" id="badge-${qi}"></span></p>
+      <div class="options">
+        ${q.options.map((o, oi) => `
+          <label class="option">
+            <input type="radio" name="q_${qi}" value="${oi}">
+            <span>${escapeHtml(o)}</span>
+          </label>
+        `).join("")}
       </div>
     `;
-
-    quizContainer.appendChild(qDiv);
+    quizContainer.appendChild(div);
   });
 
   quizCard.classList.remove("hidden");
-  quizCard.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+// ===== RÄTTA =====
 function gradeQuiz(quiz) {
-  const chosenIndices = [];
-  const wrongQIs = [];
-
   let score = 0;
-  const total = quiz.questions.length;
+  const wrong = [];
 
   quiz.questions.forEach((q, qi) => {
-    const selected = document.querySelector(`input[name="q_${qi}"]:checked`);
+    const sel = document.querySelector(`input[name="q_${qi}"]:checked`);
     const badge = el(`badge-${qi}`);
 
-    if (!selected) {
-      chosenIndices.push(null);
+    if (!sel) {
       badge.textContent = "Ej svar";
-      badge.className = "badge";
-      wrongQIs.push(qi);
+      wrong.push(qi);
       return;
     }
 
-    const chosen = Number(selected.value);
-    chosenIndices.push(chosen);
-
-    const ok = chosen === q.correctIndex;
-    if (ok) {
+    if (+sel.value === q.correctIndex) {
       score++;
       badge.textContent = "Rätt";
       badge.className = "badge ok";
     } else {
       badge.textContent = "Fel";
       badge.className = "badge err";
-      wrongQIs.push(qi);
+      wrong.push(qi);
     }
   });
 
-  lastGrade = { chosenIndices, wrongQIs };
+  lastGrade = { wrong };
 
   resultEl.classList.remove("hidden");
-  resultEl.innerHTML = `
-    <strong>Resultat:</strong> ${score} / ${total}<br/>
-    <span class="muted">Grönt = rätt, rött = fel, “Ej svar” = obesvarad fråga.</span>
-  `;
-
+  resultEl.innerHTML = `<strong>Resultat:</strong> ${score} / ${quiz.questions.length}`;
   afterActions.classList.remove("hidden");
+}
 
-  if (wrongQIs.length === 0) {
-    wrongOnlyBtn.disabled = true;
-    wrongOnlyBtn.title = "Inga fel att träna på";
-    wrongOnlyBtn.style.opacity = "0.6";
-    wrongOnlyBtn.style.cursor = "not-allowed";
-  } else {
-    wrongOnlyBtn.disabled = false;
-    wrongOnlyBtn.title = "";
-    wrongOnlyBtn.style.opacity = "1";
-    wrongOnlyBtn.style.cursor = "pointer";
+// ===== AI PROMPT =====
+function buildPrompt(qCount, optCount) {
+  return `Du är en provgenerator.
+
+Skapa exakt ${qCount} frågor baserat på bifogade bilder.
+
+FORMAT (inget annat):
+TEST: Titel
+
+Q: Fråga
+- Svar A
+- *Rätt svar
+${optCount === 3 ? "- Svar C\n" : ""}
+
+Regler:
+- Exakt ${optCount} svar per fråga
+- Endast ett rätt svar (*)
+- Inga förklaringar.`;
+}
+
+// ===== KOPIERA (iOS-SÄKER) =====
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
   }
+}
 
-  resultEl.scrollIntoView({ behavior
+copyPromptBtn.addEventListener("click", async () => {
+  const prompt = buildPrompt(+qCountEl.value, +optCountEl.value);
+  const ok = await copyToClipboard(prompt);
+
+  if (ok) {
+    copyStatus.textContent = "Kopierad! Öppna ChatGPT och klistra in.";
+  } else {
+    copyStatus.textContent = "Kunde inte kopiera – markera manuellt.";
+    window.prompt("Kopiera prompten:", prompt);
+  }
+});
+
+// ===== EVENTS =====
+loadBtn.addEventListener("click", () => {
+  try {
+    hideError();
+    currentQuiz = parseQuiz(inputText.value);
+    viewQuiz = currentQuiz;
+    renderQuiz(viewQuiz);
+  } catch (e) {
+    showError(e.message);
+  }
+});
+
+submitBtn.addEventListener("click", () => gradeQuiz(viewQuiz));
+redoBtn.addEventListener("click", () => renderQuiz(currentQuiz));
+wrongOnlyBtn.addEventListener("click", () => {
+  viewQuiz = {
+    title: currentQuiz.title + " – träna på fel",
+    questions: lastGrade.wrong.map(i => currentQuiz.questions[i])
+  };
+  renderQuiz(viewQuiz);
+});
+newQuizBtn.addEventListener("click", () => {
+  inputText.value = "";
+  resetUI();
+});
+
+clearBtn.addEventListener("click", () => inputText.value = "");
+exampleBtn.addEventListener("click", () => inputText.value = EXAMPLE_TEXT);
+
+// INIT
+resetUI();
