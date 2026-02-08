@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prov-MVP</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-row">
+      <h1 id="appTitle">Prov</h1>
+
+      <details class="howto">
+        <summary>ⓘ Så funkar det</summary>
+        <div class="howto-box">
+          <ol>
+            <li>
+              <strong>Skapa prov med AI</strong><br>
+              Tryck <em>“Kopiera ChatGPT-prompt”</em> → öppna ChatGPT-appen → bifoga bilder/foton → klistra in prompten.
+            </li>
+            <li>
+              <strong>Klistra in provet</strong><br>
+              Kopiera AI-svaret → klistra in i rutan → tryck <em>“Ladda prov”</em>.
+            </li>
+            <li>
+              <strong>Gör provet</strong><br>
+              Välj svar → tryck <em>“Klar”</em>.
+            </li>
+            <li>
+              <strong>Efteråt</strong><br>
+              <em>Gör om prov</em> (samma ordning), <em>Träna på fel</em> (bara fel frågor), eller <em>Skapa nytt prov</em>.
+            </li>
+          </ol>
+        </div>
+      </details>
+    </div>
+
+    <p class="muted">MVP: allt sker lokalt i webbläsaren (ingen inloggning, ingen backend).</p>
+  </header>
+
+  <main class="container">
+    <!-- AI prompt card -->
+    <section class="card">
+      <h2 class="h2">Skapa prov med AI</h2>
+      <p class="muted">Tryck kopiera → gå till ChatGPT → bifoga bilder/foton → klistra in prompten.</p>
+
+      <div class="row">
+        <label class="label">
+          Antal frågor
+          <select id="qCount" class="select">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="30">30</option>
+          </select>
+        </label>
+
+        <label class="label">
+          Svarsalternativ per fråga
+          <select id="optCount" class="select">
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="row">
+        <button id="copyPromptBtn" class="btn btn-primary">Kopiera ChatGPT-prompt</button>
+        <span id="copyStatus" class="muted"></span>
+      </div>
+    </section>
+
+    <!-- Input card -->
+    <section class="card">
+      <label for="inputText" class="label">Provtext</label>
+      <textarea id="inputText" class="textarea" placeholder="Klistra in provtext här...&#10;&#10;Format:&#10;TEST: Titel (valfritt)&#10;Q: Fråga&#10;- Alternativ&#10;- *Rätt alternativ&#10;- Alternativ"></textarea>
+
+      <div class="row">
+        <button id="loadBtn" class="btn">Ladda prov</button>
+        <button id="exampleBtn" class="btn btn-ghost" type="button">Klistra in exempel</button>
+        <button id="clearBtn" class="btn btn-ghost" type="button">Rensa</button>
+      </div>
+
+      <div id="parseError" class="error hidden"></div>
+    </section>
+
+    <!-- Quiz card -->
+    <section id="quizCard" class="card hidden">
+      <h2 id="quizTitle" class="h2">Prov</h2>
+      <div id="quizContainer"></div>
+
+      <div class="row">
+        <button id="submitBtn" class="btn btn-primary">Klar</button>
+      </div>
+
+      <div id="result" class="result hidden"></div>
+
+      <!-- Post-result actions -->
+      <div id="afterActions" class="row hidden">
+        <button id="newQuizBtn" class="btn">Skapa nytt prov</button>
+        <button id="redoBtn" class="btn btn-ghost" type="button">Gör om prov</button>
+        <button id="wrongOnlyBtn" class="btn btn-ghost" type="button">Träna på fel</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
