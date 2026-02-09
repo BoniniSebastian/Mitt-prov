@@ -256,3 +256,12 @@ select {
     width: 100%;
   }
 }
+/* ===== Så funkar det – vänsterställ text ===== */
+
+.howto-box {
+  text-align: left;
+}
+
+.howto-box ol {
+  margin-left: 1.2rem;
+}
