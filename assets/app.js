@@ -1,4 +1,4 @@
-// Prov-MVP: Parse -> Render -> Grade -> Redo/Wrong-only (no backend)
+// Prov-MVP: Parse -> Render -> Grade -> Overlay -> Redo/Wrong-only (no backend)
 
 const el = (id) => document.getElementById(id);
 
@@ -14,22 +14,27 @@ const quizContainer = el("quizContainer");
 
 const submitBtn = el("submitBtn");
 const parseError = el("parseError");
-const resultEl = el("result");
 
-const afterActions = el("afterActions");
+const appTitle = el("appTitle");
+
+// Efter-åtgärder (behålls för logik)
 const newQuizBtn = el("newQuizBtn");
 const redoBtn = el("redoBtn");
 const wrongOnlyBtn = el("wrongOnlyBtn");
 
-const appTitle = el("appTitle");
+// ===== Overlay DOM =====
+const resultOverlay = el("resultOverlay");
+const overlayResult = el("overlayResult");
+const overlayRedoBtn = el("overlayRedoBtn");
+const overlayWrongBtn = el("overlayWrongBtn");
+const overlayNewBtn = el("overlayNewBtn");
+const overlayCloseBtn = el("overlayCloseBtn");
 
-// AI Prompt UI
+// ===== AI Prompt UI =====
 const qCountEl = el("qCount");
 const optCountEl = el("optCount");
 const copyPromptBtn = el("copyPromptBtn");
 const copyStatus = el("copyStatus");
-
-// Prompt-ruta + fallback-knapp
 const promptBox = el("promptBox");
 const selectPromptBtn = el("selectPromptBtn");
 
@@ -46,10 +51,10 @@ Q: Vilken färg har himlen en klar dag?
 - *Blå
 - Röd
 
-Q: Hur många ben har en spindel?
-• *8
-• 6
-• 10
+Hur många ben har en spindel?
+*8
+6
+10
 `;
 
 // ===== HELPERS =====
@@ -73,12 +78,8 @@ function resetUI() {
 
   quizCard.classList.add("hidden");
   quizContainer.innerHTML = "";
-  resultEl.classList.add("hidden");
-  resultEl.innerHTML = "";
-  afterActions.classList.add("hidden");
-
   hideError();
-  appTitle.textContent = "Prov";
+  appTitle.textContent = "Mitt prov";
 }
 
 // ===== TOLERANT PARSER =====
@@ -87,148 +88,118 @@ function parseQuiz(raw) {
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map(l => l.trim())
-    .filter(l => l.length > 0);
+    .filter(Boolean);
 
-  if (lines.length === 0) throw new Error("Ingen text att parsa.");
+  if (!lines.length) throw new Error("Ingen text att parsa.");
 
-  const isTitleLine = (line) => line.toUpperCase().startsWith("TEST:");
-  const isQuestionLine = (line) =>
-    line.toUpperCase().startsWith("Q:") || line.endsWith("?");
-
-  const cleanQuestion = (line) =>
-    line.toUpperCase().startsWith("Q:") ? line.slice(2).trim() : line.trim();
-
-  const cleanOption = (line) => {
-    // Ta bort bullets/nummer om de finns
-    let s = line
-      .replace(/^(-|•|–|—)\s+/, "")
-      .replace(/^\d+[\.\)]\s+/, "")
-      .trim();
-
-    let isCorrect = false;
-
-    // Tillåt * direkt i början även utan "- "
-    if (s.startsWith("*")) {
-      isCorrect = true;
-      s = s.slice(1).trim();
-    }
-
-    return { text: s, isCorrect };
-  };
+  const isTitle = l => l.toUpperCase().startsWith("TEST:");
+  const isQuestion = l => l.toUpperCase().startsWith("Q:") || l.endsWith("?");
 
   let title = "Prov";
   let i = 0;
 
-  if (isTitleLine(lines[i])) {
-    title = lines[i].slice(5).trim() || "Prov";
+  if (isTitle(lines[i])) {
+    title = lines[i].slice(5).trim() || title;
     i++;
   }
 
   const questions = [];
 
   while (i < lines.length) {
-    const line = lines[i];
-
-    if (!isQuestionLine(line)) {
-      throw new Error(`Förväntade en fråga (Q: ... eller en rad som slutar med ?) men fick: "${line}"`);
+    if (!isQuestion(lines[i])) {
+      throw new Error(`Förväntade fråga men fick: "${lines[i]}"`);
     }
 
-    const qText = cleanQuestion(line);
-    if (!qText) throw new Error("En fråga saknar text.");
+    const qText = lines[i].replace(/^Q:/i, "").trim();
     i++;
 
     const opts = [];
     let correctIndex = -1;
 
-    // Läs alternativ tills vi stöter på nästa fråga eller TEST:
-    while (i < lines.length && !isTitleLine(lines[i]) && !isQuestionLine(lines[i])) {
-      const { text, isCorrect } = cleanOption(lines[i]);
+    while (i < lines.length && !isQuestion(lines[i]) && !isTitle(lines[i])) {
+      let line = lines[i]
+        .replace(/^(-|•|–|—)\s+/, "")
+        .replace(/^\d+[\.\)]\s+/, "")
+        .trim();
 
-      // Tomma rader filtreras bort tidigare, men skydda ändå:
-      if (!text) throw new Error(`Ett svarsalternativ är tomt i frågan: "${qText}"`);
+      let isCorrect = false;
+      if (line.startsWith("*")) {
+        isCorrect = true;
+        line = line.slice(1).trim();
+      }
+
+      if (!line) throw new Error(`Tomt svar i frågan "${qText}"`);
 
       if (isCorrect) {
         if (correctIndex !== -1) {
-          throw new Error(`Flera rätta svar markerade i frågan: "${qText}". Endast ett får ha *.`);
+          throw new Error(`Flera rätta svar i frågan "${qText}"`);
         }
         correctIndex = opts.length;
       }
 
-      opts.push(text);
+      opts.push(line);
       i++;
     }
 
     if (opts.length < 2 || opts.length > 3) {
-      throw new Error(`Frågan "${qText}" måste ha 2–3 svarsalternativ (har ${opts.length}).`);
+      throw new Error(`"${qText}" måste ha 2–3 svar (har ${opts.length})`);
     }
     if (correctIndex === -1) {
-      throw new Error(`Ingen rätt markering (*) i frågan: "${qText}".`);
+      throw new Error(`Ingen rätt markering (*) i "${qText}"`);
     }
 
     questions.push({ text: qText, options: opts, correctIndex });
   }
 
-  if (questions.length === 0) throw new Error("Inga frågor hittades.");
   return { title, questions };
 }
 
-// ===== RENDER QUIZ =====
+// ===== RENDER =====
 function renderQuiz(quiz) {
   quizContainer.innerHTML = "";
-  resultEl.classList.add("hidden");
-  resultEl.innerHTML = "";
-  afterActions.classList.add("hidden");
-
   quizTitle.textContent = quiz.title;
   appTitle.textContent = quiz.title;
 
   quiz.questions.forEach((q, qi) => {
-    const qDiv = document.createElement("div");
-    qDiv.className = "question";
+    const div = document.createElement("div");
+    div.className = "question";
 
-    qDiv.innerHTML = `
-      <p class="q-title">${qi + 1}. ${escapeHtml(q.text)} <span class="badge" id="badge-${qi}"></span></p>
-      <div class="options" role="radiogroup" aria-label="Fråga ${qi + 1}">
-        ${q.options.map((opt, oi) => {
-          const name = `q_${qi}`;
-          const id = `q_${qi}_o_${oi}`;
-          return `
-            <label class="option" for="${id}">
-              <input type="radio" id="${id}" name="${name}" value="${oi}" />
-              <span>${escapeHtml(opt)}</span>
-            </label>
-          `;
-        }).join("")}
+    div.innerHTML = `
+      <p class="q-title">${qi + 1}. ${escapeHtml(q.text)}
+        <span class="badge" id="badge-${qi}"></span>
+      </p>
+      <div class="options">
+        ${q.options.map((opt, oi) => `
+          <label class="option">
+            <input type="radio" name="q_${qi}" value="${oi}">
+            <span>${escapeHtml(opt)}</span>
+          </label>
+        `).join("")}
       </div>
     `;
 
-    quizContainer.appendChild(qDiv);
+    quizContainer.appendChild(div);
   });
 
   quizCard.classList.remove("hidden");
-  quizCard.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// ===== GRADE =====
+// ===== GRADE + OVERLAY =====
 function gradeQuiz(quiz) {
   let score = 0;
   const wrongQIs = [];
 
   quiz.questions.forEach((q, qi) => {
-    const selected = document.querySelector(`input[name="q_${qi}"]:checked`);
+    const sel = document.querySelector(`input[name="q_${qi}"]:checked`);
     const badge = el(`badge-${qi}`);
 
-    if (!selected) {
+    if (!sel) {
       badge.textContent = "Ej svar";
-      badge.className = "badge";
       wrongQIs.push(qi);
       return;
     }
 
-    const chosen = Number(selected.value);
-    const ok = chosen === q.correctIndex;
-
-    if (ok) {
+    if (Number(sel.value) === q.correctIndex) {
       score++;
       badge.textContent = "Rätt";
       badge.className = "badge ok";
@@ -241,143 +212,101 @@ function gradeQuiz(quiz) {
 
   lastGrade = { wrongQIs };
 
-  resultEl.classList.remove("hidden");
-  resultEl.innerHTML = `
-    <strong>Resultat:</strong> ${score} / ${quiz.questions.length}<br/>
-    <span class="muted">Grönt = rätt, rött = fel, “Ej svar” = obesvarad fråga.</span>
+  overlayResult.innerHTML = `
+    <strong>${score} / ${quiz.questions.length}</strong>
   `;
 
-  afterActions.classList.remove("hidden");
-
-  if (wrongQIs.length === 0) {
-    wrongOnlyBtn.disabled = true;
-    wrongOnlyBtn.title = "Inga fel att träna på";
-    wrongOnlyBtn.style.opacity = "0.6";
-    wrongOnlyBtn.style.cursor = "not-allowed";
-  } else {
-    wrongOnlyBtn.disabled = false;
-    wrongOnlyBtn.title = "";
-    wrongOnlyBtn.style.opacity = "1";
-    wrongOnlyBtn.style.cursor = "pointer";
-  }
-
-  resultEl.scrollIntoView({ behavior: "smooth", block: "end" });
+  overlayWrongBtn.disabled = wrongQIs.length === 0;
+  resultOverlay.classList.remove("hidden");
 }
 
-function buildWrongOnlyQuiz(fullQuiz, wrongQIs) {
-  const questions = wrongQIs.map(qi => fullQuiz.questions[qi]);
-  return { title: `${fullQuiz.title} – Träna på fel`, questions };
+// ===== WRONG ONLY =====
+function buildWrongOnlyQuiz(full, wrongQIs) {
+  return {
+    title: `${full.title} – Träna på fel`,
+    questions: wrongQIs.map(i => full.questions[i])
+  };
 }
 
-// ===== AI PROMPT =====
-function buildPrompt(numQuestions, numOptions) {
-  const third = numOptions === 3 ? "- <svar C>\n" : "";
+// ===== PROMPT =====
+function buildPrompt(q, o) {
+  const third = o === 3 ? "- <svar C>\n" : "";
   return `Du är en provgenerator.
 
-Jag kommer bifoga 1–10 bilder/foton (t.ex. sidor ur en bok/arbetsblad). Skapa ett prov baserat ENDAST på innehållet i bilderna.
+Jag bifogar bilder. Skapa ett prov ENDAST från innehållet.
 
-KRAV:
-- Svara ENDAST i detta textformat (inget annat):
-TEST: <kort titel>
+FORMAT:
+TEST: <titel>
 
-Q: <fråga 1>
+Q: <fråga>
 - <svar A>
 - *<rätt svar>
 ${third}
-... (fortsätt)
 
-- Skapa exakt ${numQuestions} frågor.
-- Varje fråga ska ha exakt ${numOptions} svarsalternativ.
-- Exakt ett alternativ per fråga ska markeras som rätt med en stjärna direkt efter "- ".
-- Inga extra rubriker, ingen förklaring, ingen markdown.
-
-BÖRJA NU.`;
+- Skapa exakt ${q} frågor
+- Exakt ${o} svar per fråga
+- Exakt ett * per fråga
+- Inget annat än texten ovan
+`;
 }
 
-// ===== Prompt UX =====
-copyPromptBtn.addEventListener("click", async () => {
-  const prompt = buildPrompt(Number(qCountEl.value), Number(optCountEl.value));
-
-  promptBox.value = prompt;
-  promptBox.focus();
+// ===== EVENTS =====
+copyPromptBtn.onclick = async () => {
+  const p = buildPrompt(+qCountEl.value, +optCountEl.value);
+  promptBox.value = p;
   promptBox.select();
-  promptBox.setSelectionRange(0, promptBox.value.length);
 
-  let ok = false;
   try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(prompt);
-      ok = true;
-    }
-  } catch {}
-  if (!ok) {
-    try { ok = document.execCommand("copy"); } catch {}
-  }
-
-  if (ok) {
-    copyStatus.textContent = "Kopierad! Öppna ChatGPT och klistra in.";
+    await navigator.clipboard.writeText(p);
+    copyStatus.textContent = "Kopierad!";
     selectPromptBtn.classList.add("hidden");
-  } else {
-    copyStatus.textContent = "Kunde inte kopiera automatiskt. Tryck & håll i rutan → Kopiera.";
+  } catch {
+    copyStatus.textContent = "Markera och kopiera manuellt";
     selectPromptBtn.classList.remove("hidden");
   }
-});
+};
 
-selectPromptBtn.addEventListener("click", () => {
-  promptBox.focus();
+selectPromptBtn.onclick = () => {
   promptBox.select();
-  promptBox.setSelectionRange(0, promptBox.value.length);
-  copyStatus.textContent = "Markerad. Tryck och håll i rutan → Kopiera.";
-});
+};
 
-// ===== UI EVENTS =====
-loadBtn.addEventListener("click", () => {
+loadBtn.onclick = () => {
   hideError();
   try {
     currentQuiz = parseQuiz(inputText.value);
     viewQuiz = currentQuiz;
-    lastGrade = null;
     renderQuiz(viewQuiz);
   } catch (e) {
-    showError(e.message || String(e));
+    showError(e.message);
   }
-});
+};
 
-submitBtn.addEventListener("click", () => {
-  if (!viewQuiz) return;
-  gradeQuiz(viewQuiz);
-});
+submitBtn.onclick = () => gradeQuiz(viewQuiz);
 
-redoBtn.addEventListener("click", () => {
-  if (!currentQuiz) return;
-  viewQuiz = currentQuiz;
-  lastGrade = null;
-  renderQuiz(viewQuiz);
-});
-
-wrongOnlyBtn.addEventListener("click", () => {
-  if (!currentQuiz || !lastGrade) return;
-  if (lastGrade.wrongQIs.length === 0) return;
-
-  viewQuiz = buildWrongOnlyQuiz(currentQuiz, lastGrade.wrongQIs);
-  lastGrade = null;
-  renderQuiz(viewQuiz);
-});
-
-newQuizBtn.addEventListener("click", () => {
+overlayCloseBtn.onclick = () => resultOverlay.classList.add("hidden");
+overlayRedoBtn.onclick = () => {
+  resultOverlay.classList.add("hidden");
+  renderQuiz(currentQuiz);
+};
+overlayWrongBtn.onclick = () => {
+  if (!lastGrade?.wrongQIs.length) return;
+  resultOverlay.classList.add("hidden");
+  renderQuiz(buildWrongOnlyQuiz(currentQuiz, lastGrade.wrongQIs));
+};
+overlayNewBtn.onclick = () => {
+  resultOverlay.classList.add("hidden");
   inputText.value = "";
   resetUI();
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
+};
 
-clearBtn.addEventListener("click", () => {
+clearBtn.onclick = () => {
   inputText.value = "";
   resetUI();
-});
+};
 
-exampleBtn.addEventListener("click", () => {
+exampleBtn.onclick = () => {
   inputText.value = EXAMPLE_TEXT;
-});
+};
 
 // Init
 resetUI();
