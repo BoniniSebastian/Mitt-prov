@@ -6,6 +6,27 @@
   <title>Mitt prov</title>
   <link rel="stylesheet" href="assets/style.css" />
 </head>
+  <!-- Resultat Overlay -->
+<div id="resultOverlay" class="overlay hidden">
+  <div class="overlay-card">
+    <h2 id="overlayTitle">Resultat</h2>
+
+    <div id="overlayResult" class="overlay-result"></div>
+
+    <p class="muted overlay-hint">
+      Grönt = rätt, rött = fel, “Ej svar” = obesvarad fråga.
+    </p>
+
+    <div class="overlay-actions">
+      <button id="overlayRedoBtn" class="btn">Gör om prov</button>
+      <button id="overlayWrongBtn" class="btn btn-ghost">Träna på fel</button>
+      <button id="overlayNewBtn" class="btn btn-ghost">Skapa nytt prov</button>
+    </div>
+
+    <button id="overlayCloseBtn" class="overlay-close">✕</button>
+  </div>
+</div>
+
 <body>
   <header class="app-header">
     <div class="header-row">
