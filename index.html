@@ -1,88 +1,72 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="sv">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mitt prov</title>
-  <link rel="stylesheet" href="assets/style.css" />
+
+  <link rel="stylesheet" href="assets/style.css?v=7" />
 </head>
-  <!-- Resultat Overlay -->
-<div id="resultOverlay" class="overlay hidden">
-  <div class="overlay-card">
-    <h2 id="overlayTitle">Resultat</h2>
-
-    <div id="overlayResult" class="overlay-result"></div>
-
-    <p class="muted overlay-hint">
-      Grönt = rätt, rött = fel, “Ej svar” = obesvarad fråga.
-    </p>
-
-    <div class="overlay-actions">
-      <button id="overlayRedoBtn" class="btn">Gör om prov</button>
-      <button id="overlayWrongBtn" class="btn btn-ghost">Träna på fel</button>
-      <button id="overlayNewBtn" class="btn btn-ghost">Skapa nytt prov</button>
-    </div>
-
-    <button id="overlayCloseBtn" class="overlay-close">✕</button>
-  </div>
-</div>
-
 <body>
+
+  <!-- HEADER -->
   <header class="app-header">
-    <div class="header-row">
-      <h1 id="appTitle">Prov</h1>
+    <h1 id="appTitle">Mitt prov</h1>
 
-      <details class="howto">
-        <summary>ⓘ Så funkar det</summary>
-        <div class="howto-box">
-          <ol>
-  <li>
-    <strong>Ställ in provet</strong><br>
-    Välj antal frågor och hur många svarsalternativ varje fråga ska ha.
-  </li>
-  <li>
-    <strong>Skapa prov med AI-tjänst</strong><br>
-    Tryck <em>“Generera & kopiera prompt”</em> → öppna valfri AI-tjänst → bifoga bilder/foton → klistra in prompten.
-  </li>
-  <li>
-    <strong>Klistra in provet</strong><br>
-    Kopiera AI-svaret → klistra in i provrutan → tryck <em>“Ladda prov”</em>.
-  </li>
-  <li>
-    <strong>Gör provet</strong><br>
-    Välj svar på varje fråga → tryck <em>“Klar”</em>.
-  </li>
-  <li>
-    <strong>Efteråt</strong><br>
-    Välj <em>Gör om prov</em> (samma frågor), <em>Träna på fel</em> (endast fel frågor) eller <em>Skapa nytt prov</em>.
-  </li>
-</ol>
-        </div>
-      </details>
-    </div>
+    <details class="howto">
+      <summary>ⓘ Så funkar det</summary>
+      <div class="howto-box">
+        <ol>
+          <li>
+            <strong>Ställ in provet</strong><br />
+            Välj antal frågor och hur många svarsalternativ varje fråga ska ha.
+          </li>
+          <li>
+            <strong>Skapa prov med AI-tjänst</strong><br />
+            Tryck <em>Generera & kopiera prompt</em>, öppna valfri AI-tjänst,
+            bifoga bilder/foton och klistra in prompten.
+          </li>
+          <li>
+            <strong>Klistra in provet</strong><br />
+            Kopiera AI-svaret, klistra in i provrutan och tryck <em>Ladda prov</em>.
+          </li>
+          <li>
+            <strong>Gör provet</strong><br />
+            Svara på frågorna och tryck <em>Klar</em>.
+          </li>
+          <li>
+            <strong>Efteråt</strong><br />
+            Gör om provet, träna på fel eller skapa ett nytt.
+          </li>
+        </ol>
+      </div>
+    </details>
 
-    <p class="muted">MVP: allt sker lokalt i webbläsaren (ingen inloggning krävs).</p>
+    <p class="muted">
+      MVP: allt sker lokalt i webbläsaren (ingen inloggning krävs)
+    </p>
   </header>
 
+  <!-- MAIN -->
   <main class="container">
-    <!-- AI prompt card -->
+
+    <!-- AI PROMPT -->
     <section class="card">
-      <h2 class="h2">Skapa prov med AI</h2>
-      <p class="muted">Tryck generera → gå till ChatGPT → bifoga bilder/foton → klistra in prompten.</p>
+      <h2>Skapa prov med AI</h2>
 
       <div class="row">
-        <label class="label">
+        <label>
           Antal frågor
-          <select id="qCount" class="select">
-            <option value="10" selected>10</option>
+          <select id="qCount">
+            <option value="10">10</option>
             <option value="20">20</option>
             <option value="30">30</option>
           </select>
         </label>
 
-        <label class="label">
-          Svarsalternativ per fråga
-          <select id="optCount" class="select">
+        <label>
+          Svarsalternativ
+          <select id="optCount">
             <option value="2">2</option>
             <option value="3" selected>3</option>
           </select>
@@ -90,58 +74,94 @@
       </div>
 
       <div class="row">
-        <button id="copyPromptBtn" class="btn btn-primary">Generera & kopiera prompt</button>
+        <button id="copyPromptBtn" class="btn btn-primary">
+          Generera & kopiera prompt
+        </button>
         <span id="copyStatus" class="muted"></span>
       </div>
 
-      <label class="label" for="promptBox" style="margin-top:12px;">Prompt (kopiera till ChatGPT)</label>
-      <textarea id="promptBox" class="textarea" readonly style="min-height:140px;"></textarea>
+      <textarea
+        id="promptBox"
+        class="textarea"
+        readonly
+        placeholder="Prompten visas här…"
+      ></textarea>
 
-      <div class="row">
-        <button id="selectPromptBtn" class="btn btn-ghost hidden" type="button">Markera prompt</button>
-      </div>
+      <button
+        id="selectPromptBtn"
+        class="btn btn-ghost hidden"
+        type="button"
+      >
+        Markera prompt
+      </button>
     </section>
 
-    <!-- Input card -->
+    <!-- PROVTEXT -->
     <section class="card">
-      <label for="inputText" class="label">Provtext</label>
-      <textarea id="inputText" class="textarea" placeholder="Klistra in provtext här...
+      <h2>Provtext</h2>
 
-Format:
-TEST: Titel (valfritt)
-Q: Fråga
-- Alternativ
-- *Rätt alternativ
-- Alternativ"></textarea>
+      <textarea
+        id="inputText"
+        class="textarea"
+        placeholder="Klistra in provtext här…"
+      ></textarea>
 
       <div class="row">
         <button id="loadBtn" class="btn">Ladda prov</button>
-        <button id="exampleBtn" class="btn btn-ghost" type="button">Klistra in exempel</button>
-        <button id="clearBtn" class="btn btn-ghost" type="button">Rensa</button>
+        <button id="shareLinkBtn" class="btn btn-ghost" type="button">
+          Skapa delningslänk
+        </button>
+        <button id="exampleBtn" class="btn btn-ghost" type="button">
+          Exempel
+        </button>
+        <button id="clearBtn" class="btn btn-ghost" type="button">
+          Rensa
+        </button>
       </div>
 
       <div id="parseError" class="error hidden"></div>
     </section>
 
-    <!-- Quiz card -->
+    <!-- QUIZ -->
     <section id="quizCard" class="card hidden">
-      <h2 id="quizTitle" class="h2">Prov</h2>
+      <h2 id="quizTitle">Prov</h2>
+
       <div id="quizContainer"></div>
 
       <div class="row">
         <button id="submitBtn" class="btn btn-primary">Klar</button>
       </div>
-
-      <div id="result" class="result hidden"></div>
-
-      <div id="afterActions" class="row hidden">
-        <button id="newQuizBtn" class="btn">Skapa nytt prov</button>
-        <button id="redoBtn" class="btn btn-ghost" type="button">Gör om prov</button>
-        <button id="wrongOnlyBtn" class="btn btn-ghost" type="button">Träna på fel</button>
-      </div>
     </section>
+
   </main>
 
-  <script src="assets/app.js"></script>
+  <!-- RESULT OVERLAY -->
+  <div id="resultOverlay" class="overlay hidden">
+    <div class="overlay-card">
+      <h2>Resultat</h2>
+
+      <div id="overlayResult" class="overlay-result"></div>
+
+      <p class="muted">
+        Grönt = rätt, rött = fel, “Ej svar” = obesvarad fråga.
+      </p>
+
+      <div class="overlay-actions">
+        <button id="overlayRedoBtn" class="btn">Gör om prov</button>
+        <button id="overlayWrongBtn" class="btn btn-ghost">
+          Träna på fel
+        </button>
+        <button id="overlayNewBtn" class="btn btn-ghost">
+          Skapa nytt prov
+        </button>
+      </div>
+
+      <button id="overlayCloseBtn" class="overlay-close">✕</button>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script src="assets/app.js?v=7"></script>
+
 </body>
 </html>
