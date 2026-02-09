@@ -17,12 +17,7 @@ const parseError = el("parseError");
 
 const appTitle = el("appTitle");
 
-// Efter-åtgärder (behålls för logik)
-const newQuizBtn = el("newQuizBtn");
-const redoBtn = el("redoBtn");
-const wrongOnlyBtn = el("wrongOnlyBtn");
-
-// ===== Overlay DOM =====
+// Overlay
 const resultOverlay = el("resultOverlay");
 const overlayResult = el("overlayResult");
 const overlayRedoBtn = el("overlayRedoBtn");
@@ -30,7 +25,7 @@ const overlayWrongBtn = el("overlayWrongBtn");
 const overlayNewBtn = el("overlayNewBtn");
 const overlayCloseBtn = el("overlayCloseBtn");
 
-// ===== AI Prompt UI =====
+// AI Prompt UI
 const qCountEl = el("qCount");
 const optCountEl = el("optCount");
 const copyPromptBtn = el("copyPromptBtn");
@@ -39,9 +34,9 @@ const promptBox = el("promptBox");
 const selectPromptBtn = el("selectPromptBtn");
 
 // ===== STATE =====
-let currentQuiz = null;
-let viewQuiz = null;
-let lastGrade = null;
+let currentQuiz = null; // originalprov
+let viewQuiz = null;    // det som visas just nu
+let lastGrade = null;   // senaste rättningen
 
 // ===== EXEMPEL =====
 const EXAMPLE_TEXT = `TEST: Exempelprov
@@ -195,6 +190,7 @@ function gradeQuiz(quiz) {
 
     if (!sel) {
       badge.textContent = "Ej svar";
+      badge.className = "badge";
       wrongQIs.push(qi);
       return;
     }
@@ -217,6 +213,8 @@ function gradeQuiz(quiz) {
   `;
 
   overlayWrongBtn.disabled = wrongQIs.length === 0;
+  overlayWrongBtn.style.opacity = wrongQIs.length === 0 ? "0.5" : "1";
+
   resultOverlay.classList.remove("hidden");
 }
 
@@ -266,33 +264,47 @@ copyPromptBtn.onclick = async () => {
   }
 };
 
-selectPromptBtn.onclick = () => {
-  promptBox.select();
-};
+selectPromptBtn.onclick = () => promptBox.select();
 
 loadBtn.onclick = () => {
   hideError();
   try {
     currentQuiz = parseQuiz(inputText.value);
     viewQuiz = currentQuiz;
+    lastGrade = null;
     renderQuiz(viewQuiz);
   } catch (e) {
     showError(e.message);
   }
 };
 
-submitBtn.onclick = () => gradeQuiz(viewQuiz);
+submitBtn.onclick = () => {
+  if (!viewQuiz) return;
+  gradeQuiz(viewQuiz);
+};
 
-overlayCloseBtn.onclick = () => resultOverlay.classList.add("hidden");
+// ===== OVERLAY ACTIONS =====
+overlayCloseBtn.onclick = () => {
+  resultOverlay.classList.add("hidden");
+};
+
 overlayRedoBtn.onclick = () => {
   resultOverlay.classList.add("hidden");
-  renderQuiz(currentQuiz);
+  viewQuiz = currentQuiz;
+  lastGrade = null;
+  renderQuiz(viewQuiz);
 };
+
 overlayWrongBtn.onclick = () => {
-  if (!lastGrade?.wrongQIs.length) return;
+  if (!lastGrade || lastGrade.wrongQIs.length === 0) return;
+
+  const wrongQuiz = buildWrongOnlyQuiz(currentQuiz, lastGrade.wrongQIs);
   resultOverlay.classList.add("hidden");
-  renderQuiz(buildWrongOnlyQuiz(currentQuiz, lastGrade.wrongQIs));
+  viewQuiz = wrongQuiz;
+  lastGrade = null;
+  renderQuiz(viewQuiz);
 };
+
 overlayNewBtn.onclick = () => {
   resultOverlay.classList.add("hidden");
   inputText.value = "";
