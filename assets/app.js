@@ -29,15 +29,16 @@ const optCountEl = el("optCount");
 const copyPromptBtn = el("copyPromptBtn");
 const copyStatus = el("copyStatus");
 
-// NYTT: prompt-ruta + markera-knapp
+// Prompt-ruta + fallback-knapp
 const promptBox = el("promptBox");
 const selectPromptBtn = el("selectPromptBtn");
 
 // ===== STATE =====
-let currentQuiz = null; // full quiz
-let viewQuiz = null;    // currently rendered quiz (full or wrong-only)
-let lastGrade = null;   // { wrongQIs: number[] }
+let currentQuiz = null;
+let viewQuiz = null;
+let lastGrade = null;
 
+// ===== EXEMPEL =====
 const EXAMPLE_TEXT = `TEST: Exempelprov
 
 Q: Vilken färg har himlen en klar dag?
@@ -46,14 +47,9 @@ Q: Vilken färg har himlen en klar dag?
 - Röd
 
 Q: Hur många ben har en spindel?
-- *8
-- 6
-- 10
-
-Q: Vilket är ett däggdjur?
-- Haj
-- *Hund
-- Örn
+• *8
+• 6
+• 10
 `;
 
 // ===== HELPERS =====
@@ -85,7 +81,7 @@ function resetUI() {
   appTitle.textContent = "Prov";
 }
 
-// ===== PARSE FORMAT =====
+// ===== TOLERANT PARSER =====
 function parseQuiz(raw) {
   const lines = raw
     .replace(/\r\n/g, "\n")
@@ -104,8 +100,15 @@ function parseQuiz(raw) {
   }
 
   const questions = [];
+
+  const isOptionLine = (line) => {
+    // Tillåt -, •, –, — samt 1. / 1)
+    return /^(-|•|–|—)\s+/.test(line) || /^\d+[\.\)]\s+/.test(line);
+  };
+
   while (i < lines.length) {
     const line = lines[i];
+
     if (!line.toUpperCase().startsWith("Q:")) {
       throw new Error(`Förväntade "Q:" men fick: "${line}"`);
     }
@@ -117,8 +120,12 @@ function parseQuiz(raw) {
     const opts = [];
     let correctIndex = -1;
 
-    while (i < lines.length && lines[i].startsWith("-")) {
-      let opt = lines[i].replace(/^-+\s*/, "");
+    while (i < lines.length && isOptionLine(lines[i])) {
+      let opt = lines[i]
+        .replace(/^(-|•|–|—)\s+/, "")
+        .replace(/^\d+[\.\)]\s+/, "")
+        .trim();
+
       let isCorrect = false;
 
       if (opt.startsWith("*")) {
@@ -126,7 +133,9 @@ function parseQuiz(raw) {
         opt = opt.slice(1).trim();
       }
 
-      if (!opt) throw new Error(`Ett svarsalternativ är tomt i frågan: "${qText}"`);
+      if (!opt) {
+        throw new Error(`Ett svarsalternativ är tomt i frågan: "${qText}"`);
+      }
 
       if (isCorrect) {
         if (correctIndex !== -1) {
@@ -230,7 +239,6 @@ function gradeQuiz(quiz) {
 
   afterActions.classList.remove("hidden");
 
-  // Disable "Träna på fel" om inga fel
   if (wrongQIs.length === 0) {
     wrongOnlyBtn.disabled = true;
     wrongOnlyBtn.title = "Inga fel att träna på";
@@ -248,10 +256,7 @@ function gradeQuiz(quiz) {
 
 function buildWrongOnlyQuiz(fullQuiz, wrongQIs) {
   const questions = wrongQIs.map(qi => fullQuiz.questions[qi]);
-  return {
-    title: `${fullQuiz.title} – Träna på fel`,
-    questions
-  };
+  return { title: `${fullQuiz.title} – Träna på fel`, questions };
 }
 
 // ===== AI PROMPT =====
@@ -269,54 +274,43 @@ Q: <fråga 1>
 - <svar A>
 - *<rätt svar>
 ${third}
-Q: <fråga 2>
-- <svar A>
-- *<rätt svar>
-${third}
 ... (fortsätt)
 
 - Skapa exakt ${numQuestions} frågor.
 - Varje fråga ska ha exakt ${numOptions} svarsalternativ.
 - Exakt ett alternativ per fråga ska markeras som rätt med en stjärna direkt efter "- ".
 - Inga extra rubriker, ingen förklaring, ingen markdown.
-- Svaren ska vara korta och tydligt olika.
 
 BÖRJA NU.`;
 }
 
-// ===== COPY (iOS-safe): ALWAYS show prompt + auto-select =====
+// ===== Prompt UX =====
 copyPromptBtn.addEventListener("click", async () => {
-  const numQuestions = Number(qCountEl.value);
-  const numOptions = Number(optCountEl.value);
-  const prompt = buildPrompt(numQuestions, numOptions);
+  const prompt = buildPrompt(Number(qCountEl.value), Number(optCountEl.value));
 
-  // 1) Visa prompten (så den alltid går att kopiera manuellt)
   promptBox.value = prompt;
-
-  // 2) Markera allt direkt (iOS)
   promptBox.focus();
   promptBox.select();
   promptBox.setSelectionRange(0, promptBox.value.length);
 
-  // 3) Försök kopiera automatiskt (kan funka på vissa iOS)
   let ok = false;
-
   try {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(prompt);
       ok = true;
     }
   } catch {}
-
   if (!ok) {
-    try {
-      ok = document.execCommand("copy");
-    } catch {}
+    try { ok = document.execCommand("copy"); } catch {}
   }
 
-  copyStatus.textContent = ok
-    ? "Kopierad! Öppna ChatGPT och klistra in + bifoga bilder."
-    : "Prompten är markerad. Tryck och håll i rutan → Kopiera.";
+  if (ok) {
+    copyStatus.textContent = "Kopierad! Öppna ChatGPT och klistra in.";
+    selectPromptBtn.classList.add("hidden");
+  } else {
+    copyStatus.textContent = "Kunde inte kopiera automatiskt. Tryck & håll i rutan → Kopiera.";
+    selectPromptBtn.classList.remove("hidden");
+  }
 });
 
 selectPromptBtn.addEventListener("click", () => {
@@ -330,9 +324,8 @@ selectPromptBtn.addEventListener("click", () => {
 loadBtn.addEventListener("click", () => {
   hideError();
   try {
-    const quiz = parseQuiz(inputText.value);
-    currentQuiz = quiz;
-    viewQuiz = quiz;
+    currentQuiz = parseQuiz(inputText.value);
+    viewQuiz = currentQuiz;
     lastGrade = null;
     renderQuiz(viewQuiz);
   } catch (e) {
