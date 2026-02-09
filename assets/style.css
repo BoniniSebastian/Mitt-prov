@@ -8,7 +8,10 @@ html, body {
   padding: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, Helvetica, Arial, sans-serif;
-  background: #020617;
+
+  background: url("bg.png") no-repeat center center fixed;
+  background-size: cover;
+
   color: #e5e7eb;
 }
 
