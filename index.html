@@ -17,7 +17,7 @@
           <ol>
             <li>
               <strong>Skapa prov med AI</strong><br>
-              Tryck <em>“Kopiera ChatGPT-prompt”</em> → öppna ChatGPT-appen → bifoga bilder/foton → klistra in prompten.
+              Tryck <em>“Generera & kopiera prompt”</em> → öppna ChatGPT-appen → bifoga bilder/foton → klistra in prompten.
             </li>
             <li>
               <strong>Klistra in provet</strong><br>
@@ -43,7 +43,7 @@
     <!-- AI prompt card -->
     <section class="card">
       <h2 class="h2">Skapa prov med AI</h2>
-      <p class="muted">Tryck kopiera → gå till ChatGPT → bifoga bilder/foton → klistra in prompten.</p>
+      <p class="muted">Tryck generera → gå till ChatGPT → bifoga bilder/foton → klistra in prompten.</p>
 
       <div class="row">
         <label class="label">
@@ -65,16 +65,15 @@
       </div>
 
       <div class="row">
-        <button id="copyPromptBtn" class="btn btn-primary">Kopiera ChatGPT-prompt</button>
+        <button id="copyPromptBtn" class="btn btn-primary">Generera & kopiera prompt</button>
         <span id="copyStatus" class="muted"></span>
       </div>
 
-      <!-- NYTT: Prompt-ruta som alltid fungerar att kopiera manuellt på iOS -->
       <label class="label" for="promptBox" style="margin-top:12px;">Prompt (kopiera till ChatGPT)</label>
       <textarea id="promptBox" class="textarea" readonly style="min-height:140px;"></textarea>
 
       <div class="row">
-        <button id="selectPromptBtn" class="btn btn-ghost" type="button">Markera prompt</button>
+        <button id="selectPromptBtn" class="btn btn-ghost hidden" type="button">Markera prompt</button>
       </div>
     </section>
 
@@ -110,7 +109,6 @@ Q: Fråga
 
       <div id="result" class="result hidden"></div>
 
-      <!-- Post-result actions -->
       <div id="afterActions" class="row hidden">
         <button id="newQuizBtn" class="btn">Skapa nytt prov</button>
         <button id="redoBtn" class="btn btn-ghost" type="button">Gör om prov</button>
@@ -119,6 +117,6 @@ Q: Fråga
     </section>
   </main>
 
-  <script src="assets/app.js?v=3"></script>
+  <script src="assets/app.js"></script>
 </body>
 </html>
