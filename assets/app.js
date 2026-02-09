@@ -262,6 +262,53 @@ clearBtn.onclick = () => {
   inputText.value = "";
   resetUI();
 };
+// ===== AI PROMPT =====
+function buildPrompt(numQuestions, numOptions) {
+  const third = numOptions === 3 ? "- <svar C>\n" : "";
+  return `Du är en provgenerator.
+
+Jag kommer bifoga 1–10 bilder/foton (t.ex. sidor ur en bok/arbetsblad).
+Skapa ett prov baserat ENDAST på innehållet i bilderna.
+
+KRAV – svara EXAKT i detta format:
+
+TEST: <kort titel>
+
+Q: <fråga 1>
+- <svar A>
+- *<rätt svar>
+${third}
+
+- Skapa exakt ${numQuestions} frågor
+- Varje fråga ska ha exakt ${numOptions} svarsalternativ
+- Exakt ett alternativ per fråga ska markeras med *
+- Inga extra rubriker, ingen förklaring, ingen markdown
+
+BÖRJA NU.`;
+}
+
+// ===== Prompt button =====
+copyPromptBtn.onclick = async () => {
+  const prompt = buildPrompt(+qCountEl.value, +optCountEl.value);
+
+  promptBox.value = prompt;
+  promptBox.focus();
+  promptBox.select();
+
+  try {
+    await navigator.clipboard.writeText(prompt);
+    copyStatus.textContent = "Kopierad! Öppna AI-tjänsten och klistra in.";
+    selectPromptBtn.classList.add("hidden");
+  } catch {
+    copyStatus.textContent = "Kunde inte kopiera automatiskt. Markera och kopiera manuellt.";
+    selectPromptBtn.classList.remove("hidden");
+  }
+};
+
+selectPromptBtn.onclick = () => {
+  promptBox.focus();
+  promptBox.select();
+};
 
 // ===== AUTOLOAD FROM LINK =====
 (function () {
