@@ -291,6 +291,25 @@ BÖRJA NU.`;
 copyPromptBtn.onclick = async () => {
   const prompt = buildPrompt(+qCountEl.value, +optCountEl.value);
 
+  // 🔴 DETTA VAR FELET – nu skrivs prompten in
+  promptBox.value = prompt;
+  promptBox.classList.remove("hidden");
+
+  promptBox.focus();
+  promptBox.select();
+  promptBox.setSelectionRange(0, promptBox.value.length);
+
+  try {
+    await navigator.clipboard.writeText(prompt);
+    copyStatus.textContent = "Kopierad! Öppna AI-tjänsten och klistra in.";
+    selectPromptBtn.classList.add("hidden");
+  } catch {
+    copyStatus.textContent = "Kunde inte kopiera automatiskt. Markera och kopiera manuellt.";
+    selectPromptBtn.classList.remove("hidden");
+  }
+};
+  const prompt = buildPrompt(+qCountEl.value, +optCountEl.value);
+
   promptBox.value = prompt;
   promptBox.focus();
   promptBox.select();
