@@ -91,51 +91,61 @@ function parseQuiz(raw) {
 
   if (lines.length === 0) throw new Error("Ingen text att parsa.");
 
+  const isTitleLine = (line) => line.toUpperCase().startsWith("TEST:");
+  const isQuestionLine = (line) =>
+    line.toUpperCase().startsWith("Q:") || line.endsWith("?");
+
+  const cleanQuestion = (line) =>
+    line.toUpperCase().startsWith("Q:") ? line.slice(2).trim() : line.trim();
+
+  const cleanOption = (line) => {
+    // Ta bort bullets/nummer om de finns
+    let s = line
+      .replace(/^(-|•|–|—)\s+/, "")
+      .replace(/^\d+[\.\)]\s+/, "")
+      .trim();
+
+    let isCorrect = false;
+
+    // Tillåt * direkt i början även utan "- "
+    if (s.startsWith("*")) {
+      isCorrect = true;
+      s = s.slice(1).trim();
+    }
+
+    return { text: s, isCorrect };
+  };
+
   let title = "Prov";
   let i = 0;
 
-  if (lines[i].toUpperCase().startsWith("TEST:")) {
+  if (isTitleLine(lines[i])) {
     title = lines[i].slice(5).trim() || "Prov";
     i++;
   }
 
   const questions = [];
 
-  const isOptionLine = (line) => {
-    // Tillåt -, •, –, — samt 1. / 1)
-    return /^(-|•|–|—)\s+/.test(line) || /^\d+[\.\)]\s+/.test(line);
-  };
-
   while (i < lines.length) {
     const line = lines[i];
 
-    if (!line.toUpperCase().startsWith("Q:")) {
-      throw new Error(`Förväntade "Q:" men fick: "${line}"`);
+    if (!isQuestionLine(line)) {
+      throw new Error(`Förväntade en fråga (Q: ... eller en rad som slutar med ?) men fick: "${line}"`);
     }
 
-    const qText = line.slice(2).trim();
-    if (!qText) throw new Error("En fråga saknar text efter Q:.");
+    const qText = cleanQuestion(line);
+    if (!qText) throw new Error("En fråga saknar text.");
     i++;
 
     const opts = [];
     let correctIndex = -1;
 
-    while (i < lines.length && isOptionLine(lines[i])) {
-      let opt = lines[i]
-        .replace(/^(-|•|–|—)\s+/, "")
-        .replace(/^\d+[\.\)]\s+/, "")
-        .trim();
+    // Läs alternativ tills vi stöter på nästa fråga eller TEST:
+    while (i < lines.length && !isTitleLine(lines[i]) && !isQuestionLine(lines[i])) {
+      const { text, isCorrect } = cleanOption(lines[i]);
 
-      let isCorrect = false;
-
-      if (opt.startsWith("*")) {
-        isCorrect = true;
-        opt = opt.slice(1).trim();
-      }
-
-      if (!opt) {
-        throw new Error(`Ett svarsalternativ är tomt i frågan: "${qText}"`);
-      }
+      // Tomma rader filtreras bort tidigare, men skydda ändå:
+      if (!text) throw new Error(`Ett svarsalternativ är tomt i frågan: "${qText}"`);
 
       if (isCorrect) {
         if (correctIndex !== -1) {
@@ -144,7 +154,7 @@ function parseQuiz(raw) {
         correctIndex = opts.length;
       }
 
-      opts.push(opt);
+      opts.push(text);
       i++;
     }
 
