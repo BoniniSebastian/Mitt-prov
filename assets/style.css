@@ -12,6 +12,14 @@ html, body {
   color: #e5e7eb;
 }
 
+/* ===== VIKTIG FIX: STOPPA iOS AUTO-ZOOM ===== */
+textarea,
+input,
+select {
+  font-size: 16px;               /* 🔴 magiska gränsen för iOS */
+  -webkit-text-size-adjust: 100%;
+}
+
 /* ===== LAYOUT ===== */
 .container {
   max-width: 920px;
@@ -30,7 +38,7 @@ html, body {
 
 /* ===== GLAS-KORT (ALLA RUTOR) ===== */
 .card {
-  background: rgba(15, 23, 42, 0.65); /* transparens */
+  background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border-radius: 18px;
@@ -78,6 +86,8 @@ select {
   padding: 6px 10px;
   border-radius: 8px;
   border: none;
+  background: rgba(2, 6, 23, 0.6);
+  color: #e5e7eb;
 }
 
 /* ===== TEXTAREAS ===== */
