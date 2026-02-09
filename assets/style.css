@@ -1,234 +1,204 @@
-:root {
-  --bg: #0b0f17;
-  --card: #111827;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
-  --border: #243044;
-  --error: #ef4444;
+/* ===== RESET / BAS ===== */
+* {
+  box-sizing: border-box;
 }
 
-/* Reset */
-* { box-sizing: border-box; }
-
-/* ===== BODY + BAKGRUNDSBILD ===== */
-body {
+html, body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-  color: var(--text);
-
-  background:
-    linear-gradient(
-      rgba(7, 10, 16, 0.88),
-      rgba(7, 10, 16, 0.94)
-    ),
-    url("bg.png");
-
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  background: #020617;
+  color: #e5e7eb;
 }
-
-/* ===== HEADER ===== */
-.app-header {
-  padding: 20px 16px 8px;
-  max-width: 900px;
-  margin: 0 auto;
-}
-.header-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.muted { color: var(--muted); margin-top: 6px; }
 
 /* ===== LAYOUT ===== */
 .container {
-  max-width: 900px;
+  max-width: 920px;
   margin: 0 auto;
-  padding: 12px 16px 28px;
-  display: grid;
-  gap: 14px;
+  padding: 16px;
 }
 
-/* ===== CARDS ===== */
-.card {
-  background: rgba(17, 24, 39, 0.88);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 14px;
+.app-header {
+  padding: 16px;
+  text-align: center;
+}
 
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+.app-header h1 {
+  margin-bottom: 8px;
+}
+
+/* ===== GLAS-KORT (ALLA RUTOR) ===== */
+.card {
+  background: rgba(15, 23, 42, 0.65); /* transparens */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
 }
 
 /* ===== TEXT ===== */
-.h2 { margin: 0 0 10px; }
-.label { display: block; margin: 0 0 8px; color: var(--muted); }
+h2 {
+  margin-top: 0;
+}
 
-/* ===== INPUTS ===== */
+.muted {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.error {
+  margin-top: 8px;
+  color: #f87171;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ===== FORM ===== */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  gap: 4px;
+}
+
+select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+}
+
+/* ===== TEXTAREAS ===== */
 .textarea {
   width: 100%;
-  min-height: 180px;
-  resize: vertical;
+  min-height: 120px;
+  margin-top: 8px;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid var(--border);
-  background: #0a1220;
-  color: var(--text);
-  outline: none;
-  line-height: 1.35;
-}
-.select {
-  width: 100%;
-  margin-top: 8px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: #0a1220;
-  color: var(--text);
-  outline: none;
+  border: none;
+  resize: vertical;
+  background: rgba(2, 6, 23, 0.6);
+  color: #e5e7eb;
 }
 
 /* ===== BUTTONS ===== */
-.row {
-  margin-top: 12px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-}
 .btn {
-  appearance: none;
-  border: 1px solid var(--border);
-  background: #0a1220;
-  color: var(--text);
-  padding: 10px 12px;
+  padding: 10px 14px;
   border-radius: 12px;
+  border: none;
   cursor: pointer;
   font-weight: 600;
+  background: #22c55e;
+  color: #022c22;
 }
-.btn:hover { filter: brightness(1.08); }
-.btn:active { transform: translateY(1px); }
+
 .btn-primary {
-  background: #1f2937;
-  border-color: #334155;
+  background: #22c55e;
+  color: #022c22;
 }
-.btn-ghost { background: transparent; }
+
+.btn-ghost {
+  background: rgba(255,255,255,0.08);
+  color: #e5e7eb;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* ===== QUIZ ===== */
-.hidden { display: none !important; }
-
 .question {
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px;
-  margin: 12px 0;
-  background: rgba(10, 18, 32, 0.7);
+  margin-bottom: 16px;
 }
-.q-title { margin: 0 0 10px; font-weight: 800; }
-.options { display: grid; gap: 8px; }
 
-.option {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  cursor: pointer;
-  user-select: none;
+.q-title {
+  margin-bottom: 8px;
 }
-.option input { margin-top: 2px; }
+
+/* ===== OPTIONS + NEON ===== */
+.option {
+  display: block;
+  border-radius: 14px;
+  margin-bottom: 8px;
+}
+
+.option span {
+  display: block;
+  padding: 12px 14px;
+  background: rgba(2, 6, 23, 0.55);
+  border-radius: 14px;
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.option input {
+  display: none;
+}
+
+/* Neon feedback vid val */
+.option input:checked + span {
+  box-shadow:
+    0 0 0 2px rgba(34, 197, 94, 0.7),
+    0 0 14px rgba(34, 197, 94, 0.9),
+    0 0 28px rgba(34, 197, 94, 0.6);
+  transform: scale(1.02);
+}
 
 /* ===== BADGES ===== */
 .badge {
-  display: inline-block;
   margin-left: 8px;
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--muted);
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 6px;
 }
+
 .badge.ok {
-  color: #bbf7d0;
-  border-color: rgba(34, 197, 94, 0.5);
-  background: rgba(34, 197, 94, 0.12);
+  background: #22c55e;
+  color: #022c22;
 }
+
 .badge.err {
-  color: #fecaca;
-  border-color: rgba(239, 68, 68, 0.5);
-  background: rgba(239, 68, 68, 0.12);
+  background: #ef4444;
+  color: #fff;
 }
 
-/* ===== RESULT & ERROR ===== */
-.result {
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(31, 41, 55, 0.55);
-}
-.error {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  background: rgba(239, 68, 68, 0.12);
-  color: #fecaca;
-}
-
-/* ===== HOW TO ===== */
-.howto summary {
-  cursor: pointer;
-  color: var(--muted);
-  font-weight: 600;
-}
-.howto-box {
-  margin-top: 10px;
-  padding: 10px;
-  border-radius: 12px;
-  background: rgba(10, 18, 32, 0.7);
-  border: 1px solid var(--border);
-}
-.howto-box ol {
-  padding-left: 18px;
-  margin: 0;
-}
-.howto-box li { margin-bottom: 8px; }
-/* ===== Result Overlay ===== */
+/* ===== OVERLAY ===== */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6); /* mörk, halvtransparent */
+  background: rgba(2, 6, 23, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
-.overlay.hidden {
-  display: none;
-}
-
 .overlay-card {
-  background: #0f172a;
-  color: #fff;
-  width: min(92%, 420px);
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 20px;
   padding: 24px;
-  border-radius: 16px;
+  width: min(92%, 420px);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
   position: relative;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-}
-
-.overlay-card h2 {
-  margin-top: 0;
 }
 
 .overlay-result {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.4rem;
+  font-weight: 700;
   margin: 12px 0;
 }
 
@@ -241,46 +211,35 @@ body {
 
 .overlay-close {
   position: absolute;
-  top: 12px;
+  top: 10px;
   right: 12px;
-  background: transparent;
+  background: none;
   border: none;
-  color: #fff;
   font-size: 20px;
+  color: #e5e7eb;
   cursor: pointer;
 }
 
-.overlay-hint {
-  font-size: 0.85rem;
-}
-/* ===== Neon feedback vid val ===== */
-.option {
-  position: relative;
-  border-radius: 12px;
-  transition: box-shadow 0.2s ease, transform 0.1s ease;
+/* ===== HOWTO ===== */
+.howto summary {
+  cursor: pointer;
+  font-weight: 600;
 }
 
-.option input[type="radio"] {
-  accent-color: #22c55e; /* grön */
-}
-
-/* När alternativet är valt */
-.option input[type="radio"]:checked + span {
-  box-shadow:
-    0 0 0 2px rgba(34, 197, 94, 0.6),
-    0 0 12px rgba(34, 197, 94, 0.8),
-    0 0 24px rgba(34, 197, 94, 0.5);
+.howto-box {
+  margin-top: 8px;
+  background: rgba(2, 6, 23, 0.6);
+  padding: 12px;
   border-radius: 12px;
 }
 
-/* Liten "pop"-känsla */
-.option input[type="radio"]:checked + span {
-  transform: scale(1.02);
-}
+/* ===== RESPONSIVE ===== */
+@media (max-width: 600px) {
+  .overlay-card {
+    padding: 16px;
+  }
 
-/* Gör hela ytan klickbar */
-.option span {
-  display: block;
-  padding: 12px 14px;
-  transition: box-shadow 0.2s ease, transform 0.1s ease;
+  .btn {
+    width: 100%;
+  }
 }
