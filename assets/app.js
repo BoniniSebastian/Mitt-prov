@@ -1,4 +1,5 @@
 // Mitt prov – frontend-only (Parse -> Render -> Grade -> Overlay -> Share link + AI prompt)
+// Regel: Rätt svar måste skrivas som "- *Svar" (stjärnan direkt efter "- ")
 
 const el = (id) => document.getElementById(id);
 
@@ -111,7 +112,7 @@ async function copyTextSmart(text, textareaToSelect) {
   return false;
 }
 
-// ===== PARSER (tolerant) =====
+// ===== PARSER (tolerant men strikt på rätt-markering) =====
 function parseQuiz(raw) {
   const lines = raw.replace(/\r\n/g, "\n")
     .split("\n")
@@ -145,21 +146,28 @@ function parseQuiz(raw) {
     let correctIndex = -1;
 
     while (i < lines.length && !isQuestion(lines[i]) && !isTitle(lines[i])) {
-      let line = lines[i]
-        .replace(/^(-|•|–|—)\s+/, "")
-        .replace(/^\d+[\.\)]\s+/, "")
-        .trim();
+      const rawLine = lines[i].trim();
 
-      let isCorrect = false;
-      if (line.startsWith("*")) {
-        isCorrect = true;
-        line = line.slice(1).trim();
-      }
+      // ✅ Endast "- *Svar" (eller "• *Svar", "– *Svar", "— *Svar") räknas som rätt
+      const isCorrect = /^(-|•|–|—)\s*\*/.test(rawLine);
+
+      // Ta bort ev. numrering först (t.ex. "1) - *Svar")
+      let line = rawLine.replace(/^\d+[\.\)]\s+/, "");
+
+      // Ta bort bullet-tecken (- • – —)
+      line = line.replace(/^(-|•|–|—)\s*/, "");
+
+      // Om korrekt: ta bort stjärnan direkt efter bullet
+      if (isCorrect) line = line.replace(/^\*\s*/, "");
+
+      line = line.trim();
 
       if (!line) throw new Error(`Tomt svar i frågan "${qText}"`);
 
       if (isCorrect) {
-        if (correctIndex !== -1) throw new Error(`Flera rätta svar i frågan "${qText}"`);
+        if (correctIndex !== -1) {
+          throw new Error(`Flera rätta svar i frågan "${qText}". Endast en rad får vara "- *Svar".`);
+        }
         correctIndex = opts.length;
       }
 
@@ -171,7 +179,7 @@ function parseQuiz(raw) {
       throw new Error(`"${qText}" måste ha 2–3 svarsalternativ (har ${opts.length}).`);
     }
     if (correctIndex === -1) {
-      throw new Error(`Ingen rätt markering (*) i frågan "${qText}".`);
+      throw new Error(`Ingen rätt markering i frågan "${qText}". Rätt svar måste skrivas som "- *Svar".`);
     }
 
     questions.push({ text: qText, options: opts, correctIndex });
@@ -255,11 +263,10 @@ function decodeQuiz(encoded) {
 
 // ===== EVENTS =====
 
-// Prompt: generera + visa + kopiera (med fallback)
+// Prompt: generera + visa + kopiera
 copyPromptBtn.onclick = async () => {
   const prompt = buildPrompt(+qCountEl.value, +optCountEl.value);
 
-  // Visa alltid prompten i rutan
   promptBox.value = prompt;
   promptBox.focus();
   promptBox.select();
@@ -276,7 +283,6 @@ copyPromptBtn.onclick = async () => {
   }
 };
 
-// Fallback-knapp: markera prompt manuellt
 selectPromptBtn.onclick = () => {
   promptBox.focus();
   promptBox.select();
@@ -351,22 +357,22 @@ shareLinkBtn.onclick = async () => {
   const url = `${location.origin}${location.pathname}?quiz=${encoded}`;
 
   const ok = await copyTextSmart(url, null);
-  alert(ok ? "Delningslänk kopierad! Skicka till ditt barn." : "Kunde inte kopiera länken. Markera och kopiera manuellt:\n\n" + url);
+  alert(ok ? "Delningslänk kopierad! Skicka till mottagaren." : "Kunde inte kopiera länken:\n\n" + url);
 };
 
-// Exempel
+// Exempel (uppdaterat: endast "- *" räknas)
 exampleBtn.onclick = () => {
   inputText.value = `TEST: Exempelprov
+
+Q: Vad täcker ungefär 70 procent av jordens yta?
+- Land
+- Is
+- *Hav
 
 Q: 2 + 2?
 - 3
 - *4
-- 5
-
-Vilken färg har en banan?
-*Gul
-Grön
-Blå`;
+- 5`;
 };
 
 // Rensa
