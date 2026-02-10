@@ -1,5 +1,6 @@
 // Mitt prov – frontend-only
-// Regel: Rätt svar måste skrivas exakt som "- *Rätt svar"
+// Intern regel: Rätt svar måste vara "- *Rätt svar"
+// Import: Om du klistrar in ChatGPT-output med "* ..." / "* *..." normaliserar vi till "- ... / - *..."
 
 const el = (id) => document.getElementById(id);
 
@@ -60,15 +61,18 @@ function resetUI() {
   currentQuiz = null;
   viewQuiz = null;
   lastGrade = null;
+
   quizCard.classList.add("hidden");
   quizContainer.innerHTML = "";
   hideError();
+
+  if (resultOverlay) resultOverlay.classList.add("hidden");
   appTitle.textContent = "Mitt prov";
 }
 
-// ===== AI PROMPT (MATCHAR PARSERN EXAKT) =====
+// ===== AI PROMPT (matchar vår parser) =====
 function buildPrompt(numQuestions, numOptions) {
-  const third = numOptions === 3 ? "- <svar C>\n" : "";
+  const third = numOptions === 3 ? "- <fel svar C>\n" : "";
   return `Du är en provgenerator.
 
 Jag kommer bifoga 1–10 bilder/foton (t.ex. sidor ur en bok/arbetsblad).
@@ -90,14 +94,14 @@ REGLER:
 - Alla andra svar ska vara "- Fel svar"
 - Exakt ${numQuestions} frågor
 - Exakt ${numOptions} svar per fråga
-- Inget annat än detta format
-- Inga förklaringar, inga rubriker, ingen markdown
+- Inget annat än detta format (inga extra rubriker, inga förklaringar, ingen markdown)
 
 BÖRJA NU.`;
 }
 
 // ===== SMART COPY =====
 async function copyTextSmart(text, textarea) {
+  // 1) Clipboard API
   try {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text);
@@ -105,11 +109,13 @@ async function copyTextSmart(text, textarea) {
     }
   } catch {}
 
+  // 2) Fallback: select + execCommand
   try {
     if (textarea) {
       textarea.value = text;
       textarea.focus();
       textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
     }
     return document.execCommand("copy");
   } catch {
@@ -117,17 +123,51 @@ async function copyTextSmart(text, textarea) {
   }
 }
 
-// ===== PARSER =====
-function parseQuiz(raw) {
-  const lines = raw.replace(/\r\n/g, "\n")
+// ===== NORMALISERING AV CHATGPT-TEXT =====
+// Tar ChatGPT-output med "*" som bullets och gör om till "- "
+// Ex:
+// "* Hav"      -> "- Hav"
+// "* *Hav"     -> "- *Hav"
+// "*  * Hav"   -> "- *Hav"
+function normalizeFromChatGPT(raw) {
+  return raw
+    .replace(/\r\n/g, "\n")
     .split("\n")
-    .map(l => l.trim())
+    .map((line) => {
+      const t = line.trimEnd();
+
+      // Matcha ChatGPT-bullets: "* något"
+      const m = t.match(/^\*\s+(.*)$/);
+      if (m) {
+        let rest = (m[1] || "").trim();
+
+        // Om den efterföljande texten börjar med "*" => rätt svar
+        if (rest.startsWith("*")) {
+          rest = rest.replace(/^\*\s*/, "").trim();
+          return `- *${rest}`;
+        }
+
+        // annars vanligt svar
+        return `- ${rest}`;
+      }
+
+      return t;
+    })
+    .join("\n");
+}
+
+// ===== PARSER (strikt på "- *" som rätt) =====
+function parseQuiz(raw) {
+  const lines = raw
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((l) => l.trim())
     .filter(Boolean);
 
   if (!lines.length) throw new Error("Ingen text att parsa.");
 
-  const isTitle = l => l.toUpperCase().startsWith("TEST:");
-  const isQuestion = l => l.toUpperCase().startsWith("Q:") || l.endsWith("?");
+  const isTitle = (l) => l.toUpperCase().startsWith("TEST:");
+  const isQuestion = (l) => l.toUpperCase().startsWith("Q:") || l.endsWith("?");
 
   let title = "Prov";
   let i = 0;
@@ -153,12 +193,15 @@ function parseQuiz(raw) {
     while (i < lines.length && !isQuestion(lines[i]) && !isTitle(lines[i])) {
       const rawLine = lines[i];
 
+      // ✅ endast rader som börjar med "- *" (eller •/–/—) räknas som rätt
       const isCorrect = /^(-|•|–|—)\s*\*/.test(rawLine);
 
+      // stöd för numrering först (t.ex. "1) - *Svar")
       let line = rawLine
         .replace(/^\d+[\.\)]\s+/, "")
         .replace(/^(-|•|–|—)\s*/, "");
 
+      // ta bort stjärnan om den var korrekt (den måste komma direkt efter bullet)
       if (isCorrect) line = line.replace(/^\*\s*/, "");
 
       line = line.trim();
@@ -179,7 +222,7 @@ function parseQuiz(raw) {
     }
 
     if (opts.length < 2 || opts.length > 3) {
-      throw new Error(`"${qText}" måste ha 2–3 svarsalternativ.`);
+      throw new Error(`"${qText}" måste ha 2–3 svarsalternativ (har ${opts.length}).`);
     }
     if (correctIndex === -1) {
       throw new Error(
@@ -207,12 +250,16 @@ function renderQuiz(quiz) {
         <span class="badge" id="badge-${qi}"></span>
       </p>
       <div class="options">
-        ${q.options.map((opt, oi) => `
+        ${q.options
+          .map(
+            (opt, oi) => `
           <label class="option">
             <input type="radio" name="q_${qi}" value="${oi}">
             <span>${escapeHtml(opt)}</span>
           </label>
-        `).join("")}
+        `
+          )
+          .join("")}
       </div>
     `;
     quizContainer.appendChild(div);
@@ -267,35 +314,64 @@ function decodeQuiz(encoded) {
 }
 
 // ===== EVENTS =====
+
+// Generera + visa + kopiera prompt
 copyPromptBtn.onclick = async () => {
   const prompt = buildPrompt(+qCountEl.value, +optCountEl.value);
-  promptBox.value = prompt;
-  const ok = await copyTextSmart(prompt, promptBox);
-  copyStatus.textContent = ok
-    ? "Prompt kopierad!"
-    : "Markera och kopiera manuellt.";
-};
 
-loadBtn.onclick = () => {
-  hideError();
-  try {
-    currentQuiz = parseQuiz(inputText.value);
-    viewQuiz = currentQuiz;
-    lastGrade = null;
-    renderQuiz(viewQuiz);
-  } catch (e) {
-    showError(e.message);
+  promptBox.value = prompt;
+  promptBox.focus();
+  promptBox.select();
+  promptBox.setSelectionRange(0, promptBox.value.length);
+
+  const ok = await copyTextSmart(prompt, promptBox);
+  if (ok) {
+    copyStatus.textContent = "Prompt kopierad!";
+    selectPromptBtn.classList.add("hidden");
+  } else {
+    copyStatus.textContent = "Kunde inte kopiera. Markera och kopiera manuellt.";
+    selectPromptBtn.classList.remove("hidden");
   }
 };
 
-submitBtn.onclick = () => {
-  if (viewQuiz) gradeQuiz(viewQuiz);
+selectPromptBtn.onclick = () => {
+  promptBox.focus();
+  promptBox.select();
+  promptBox.setSelectionRange(0, promptBox.value.length);
+  copyStatus.textContent = "Markerad. Kopiera manuellt.";
 };
 
+// Ladda prov (med normalisering)
+loadBtn.onclick = () => {
+  hideError();
+  if (resultOverlay) resultOverlay.classList.add("hidden");
+
+  try {
+    const normalized = normalizeFromChatGPT(inputText.value);
+    inputText.value = normalized; // så du ser exakt vad appen läser
+
+    currentQuiz = parseQuiz(normalized);
+    viewQuiz = currentQuiz;
+    lastGrade = null;
+
+    renderQuiz(viewQuiz);
+  } catch (e) {
+    showError(e.message || String(e));
+  }
+};
+
+// Klar
+submitBtn.onclick = () => {
+  if (!viewQuiz) return;
+  gradeQuiz(viewQuiz);
+};
+
+// Overlay: stäng
 overlayCloseBtn.onclick = () => {
   resultOverlay.classList.add("hidden");
 };
 
+// Overlay: gör om (original)
 overlayRedoBtn.onclick = () => {
   resultOverlay.classList.add("hidden");
   viewQuiz = currentQuiz;
@@ -303,63 +379,79 @@ overlayRedoBtn.onclick = () => {
   renderQuiz(viewQuiz);
 };
 
+// Overlay: träna på fel
 overlayWrongBtn.onclick = () => {
   if (!lastGrade?.wrongQIs?.length) return;
 
-  viewQuiz = {
+  const wrongQuiz = {
     title: `${currentQuiz.title} – Träna på fel`,
-    questions: lastGrade.wrongQIs.map(i => currentQuiz.questions[i])
+    questions: lastGrade.wrongQIs.map((i) => currentQuiz.questions[i]),
   };
+
   resultOverlay.classList.add("hidden");
+  viewQuiz = wrongQuiz;
+  lastGrade = null;
   renderQuiz(viewQuiz);
 };
 
+// Overlay: nytt
 overlayNewBtn.onclick = () => {
   resultOverlay.classList.add("hidden");
   inputText.value = "";
   resetUI();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
+// Delningslänk (delar provtexten som ligger i rutan)
 shareLinkBtn.onclick = async () => {
-  if (!inputText.value.trim()) return alert("Ingen provtext att dela.");
-  const url =
-    `${location.origin}${location.pathname}?quiz=${encodeQuiz(inputText.value)}`;
+  const text = inputText.value.trim();
+  if (!text) return alert("Ingen provtext att dela.");
+
+  const url = `${location.origin}${location.pathname}?quiz=${encodeQuiz(text)}`;
   const ok = await copyTextSmart(url, null);
-  alert(ok ? "Delningslänk kopierad!" : url);
+
+  alert(ok ? "Delningslänk kopierad!" : `Kunde inte kopiera. Här är länken:\n\n${url}`);
 };
 
+// Exempel
 exampleBtn.onclick = () => {
   inputText.value = `TEST: Exempelprov
 
 Q: Vad täcker ungefär 70 procent av jordens yta?
-- Land
-- Is
-- *Hav
+* Land
+* *Hav
+* Is
 
 Q: 2 + 2?
-- 3
-- *4
-- 5`;
+* 3
+* *4
+* 5`;
 };
 
+// Rensa
 clearBtn.onclick = () => {
   inputText.value = "";
   resetUI();
 };
 
-// ===== AUTOLOAD FROM LINK =====
+// ===== AUTOLOAD FROM LINK (normaliserar också) =====
 (() => {
   const q = new URLSearchParams(location.search).get("quiz");
   if (!q) return;
+
   try {
-    const decoded = decodeQuiz(q);
+    const decoded = normalizeFromChatGPT(decodeQuiz(q));
     inputText.value = decoded;
+
     currentQuiz = parseQuiz(decoded);
     viewQuiz = currentQuiz;
+    lastGrade = null;
+
     renderQuiz(viewQuiz);
   } catch {
     showError("Kunde inte läsa provet från länken.");
   }
 })();
 
+// Init
 resetUI();
