@@ -3,10 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Mitt prov</title>
 
+  <!-- Beskrivning (visas i delning / sökresultat) -->
+  <meta name="description" content="Skapa och gör prov direkt i webbläsaren. Ingen inloggning krävs." />
+
+  <!-- Open Graph (styr hur länken ser ut när den delas) -->
+  <meta property="og:title" content="Mitt prov – skapa och gör prov online" />
+  <meta property="og:description" content="Skapa prov med AI, dela via länk och rätta direkt i webbläsaren." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://boninisebastian.github.io/Mitt-prov/" />
+  <meta property="og:image" content="https://boninisebastian.github.io/Mitt-prov/assets/preview.png" />
+
+  <!-- iOS / Apple -->
+  <meta name="apple-mobile-web-app-title" content="Mitt prov" />
+
+  <!-- CSS -->
   <link rel="stylesheet" href="assets/style.css?v=7" />
 </head>
+
 <body>
 
   <!-- HEADER -->
@@ -19,12 +35,12 @@
         <ol>
           <li>
             <strong>Ställ in provet</strong><br />
-            Välj antal frågor och hur många svarsalternativ varje fråga ska ha.
+            Välj antal frågor och svarsalternativ.
           </li>
           <li>
-            <strong>Skapa ditt egna prov</strong><br />
+            <strong>Skapa prov med AI-tjänst</strong><br />
             Tryck <em>Generera & kopiera prompt</em>, öppna valfri AI-tjänst,
-            bifoga bilder/foton och klistra in prompten.
+            bifoga bilder och klistra in prompten.
           </li>
           <li>
             <strong>Klistra in provet</strong><br />
@@ -43,8 +59,7 @@
     </details>
 
     <p class="muted">
-      MVP: Osäker? ☝🏻 Klicka på "Så funkar det" 
-    
+      Allt sker lokalt i webbläsaren (ingen inloggning krävs)
     </p>
   </header>
 
@@ -74,12 +89,11 @@
         </label>
       </div>
 
-      <div class="row">
-        <button id="copyPromptBtn" class="btn btn-primary">
-          Generera & kopiera prompt
-        </button>
-        <span id="copyStatus" class="muted"></span>
-      </div>
+      <button id="copyPromptBtn" class="btn btn-primary">
+        Generera & kopiera prompt
+      </button>
+
+      <span id="copyStatus" class="muted"></span>
 
       <textarea
         id="promptBox"
@@ -88,11 +102,7 @@
         placeholder="Prompten visas här…"
       ></textarea>
 
-      <button
-        id="selectPromptBtn"
-        class="btn btn-ghost hidden"
-        type="button"
-      >
+      <button id="selectPromptBtn" class="btn btn-ghost hidden" type="button">
         Markera prompt
       </button>
     </section>
@@ -108,7 +118,7 @@
       ></textarea>
 
       <div class="row">
-        <button id="loadBtn" class="btn">Ladda prov</button>
+        <button id="loadBtn" class="btn btn-primary">Ladda prov</button>
         <button id="shareLinkBtn" class="btn btn-ghost" type="button">
           Skapa delningslänk
         </button>
@@ -126,7 +136,6 @@
     <!-- QUIZ -->
     <section id="quizCard" class="card hidden">
       <h2 id="quizTitle">Prov</h2>
-
       <div id="quizContainer"></div>
 
       <div class="row">
@@ -141,7 +150,7 @@
     <div class="overlay-card">
       <h2>Resultat</h2>
 
-      <div id="overlayResult" class="overlay-result"></div>
+      <div id="overlayResult"></div>
 
       <p class="muted">
         Grönt = rätt, rött = fel, “Ej svar” = obesvarad fråga.
@@ -149,12 +158,8 @@
 
       <div class="overlay-actions">
         <button id="overlayRedoBtn" class="btn">Gör om prov</button>
-        <button id="overlayWrongBtn" class="btn btn-ghost">
-          Träna på fel
-        </button>
-        <button id="overlayNewBtn" class="btn btn-ghost">
-          Skapa nytt prov
-        </button>
+        <button id="overlayWrongBtn" class="btn btn-ghost">Träna på fel</button>
+        <button id="overlayNewBtn" class="btn btn-ghost">Skapa nytt prov</button>
       </div>
 
       <button id="overlayCloseBtn" class="overlay-close">✕</button>
